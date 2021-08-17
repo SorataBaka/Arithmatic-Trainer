@@ -5,7 +5,8 @@ const ObjectsToCsv = require('objects-to-csv')
 const arithmaticTrainer = async() => {
   var correctAnswers = []
   var wrongAnswers = []
-  
+  var timeArray = []
+
   var amount;
   var leftSideMax;
   var rightSideMax;
@@ -85,10 +86,16 @@ const arithmaticTrainer = async() => {
     if(multiplication.toLowerCase() == "y"){
       methodArray.push("x")
     }
+    if(methodArray.length == 0){
+      console.log("No method specified! Please try again.")
+      return initialization()
+    } 
     const leftNumber = Math.floor(Math.random() * leftSideMax)
     const rightNumber = Math.floor(Math.random() * rightSideMax)
     const method = methodArray[Math.floor(Math.random() * methodArray.length)]
     const string = `${leftNumber} ${method} ${rightNumber} = `
+
+
     var correctAnswer;
     if(method == "+"){
       correctAnswer = leftNumber + rightNumber
@@ -99,22 +106,38 @@ const arithmaticTrainer = async() => {
     if(method == "x"){
       correctAnswer = leftNumber * rightNumber
     }
-  
+
+
+    const startTime = new Date().getTime()
     const answer = prompt(string)
-    if(answer == correctAnswer){
-      correctAnswers.push({equation: string+correctAnswer, yourAnswer: answer})
-    }else{
-      wrongAnswers.push({equation: string+correctAnswer, yourAnswer: answer})
-    }
+    const stopTime = new Date().getTime()
+    var amountofTime = stopTime - startTime
+    
+    timeArray.push(amountofTime)
+    var averageTime;
+    timeArray.forEach(time => averageTime + time)
+    averageTime = averageTime / timeArray.length
+
+
+    amountofTime = amountofTime / 1000 
     console.clear()
+
+    if(answer == correctAnswer){
+      correctAnswers.push({equation: string+correctAnswer, yourAnswer: answer, timeTook: amountofTime})
+      console.log(`Correct! ${amountofTime} | Current Average: ${averageTime}`)
+    }else{
+      wrongAnswers.push({equation: string+correctAnswer, yourAnswer: answer, timeTook: amountofTime})
+      console.log(`Wrong! ${amountofTime} | Correct Answer: ${correctAnswer} | Current Average: ${averageTime}`)
+    }
+    
     if(correctAnswers.length + wrongAnswers.length == amount){
       const fileName = Math.floor(Date.now()/1000)
-      const JSONOutput = [correctAnswers, wrongAnswers]
+      const JSONOutput = [correctAnswers, wrongAnswers, {total: amount, leftMax : leftSideMax, rightMax : rightSideMax, average : averageTime }]
+
       fs.writeFileSync(`./History/${fileName}.JSON`, JSON.stringify(JSONOutput))
       return console.log(`Congrats! You have finished ${amount} questions with ${correctAnswers.length} correct and ${wrongAnswers.length} wrong answers.`)
     }else{
       generateEquation()
-  
     }
   }
   initialization()
@@ -182,13 +205,31 @@ const equationGenerator = async() => {
 
   printFunction()
 }
+
+const readHistory = async() => {
+  const histories = fs.readdirSync("./History").reverse()
+  if(histories.length == 0) return console.log("No history found")
+  console.clear()
+  histories.forEach(file => {
+    const jsonFile = fs.readFileSync(`./History/${file}`)
+    const readFile = JSON.parse(jsonFile)
+    const correctAmount = readFile[0].length
+    const wrongAmount = readFile[1].length
+    const date = file.split(".")[0]
+    const convertDate = new Date(date * 1000).toLocaleString()
+    console.log(`${convertDate} | Total Amount : ${correctAmount + wrongAmount} | Correct : ${correctAmount} | Wrong : ${wrongAmount}`)
+  })
+}
+
 const selectionFunc = async() => {
   console.clear()
-  const selection = prompt("Which function do you want to use?  [1] Arithmatic Trainer  [2] Equation Generator : ")
+  const selection = prompt("Which function do you want to use?  [1] Arithmatic Trainer  [2] Equation Generator [3] Read Trainer History: ")
   if(selection == 1){
     return arithmaticTrainer()
   }else if(selection == 2){
     return equationGenerator()
+  }else if(selection == 3){
+    return readHistory()
   }else{
     console.clear()
     console.log("Invalid Argument! Try again.")
